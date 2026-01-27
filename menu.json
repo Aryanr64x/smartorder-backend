@@ -1,0 +1,227 @@
+[
+  {
+    "name": "Sweet Corn Soup",
+    "description": "Thick creamy Cantonese soup with fresh sweet corn",
+    "price": { "veg": 450, "chicken": 475 }
+  },
+  {
+    "name": "Hot N Sour Soup",
+    "description": "Spicy and sour thick soup with mushrooms",
+    "price": { "veg": 450, "chicken": 475 }
+  },
+  {
+    "name": "Manchow Soup",
+    "description": "Medium spicy thick soup with cabbage, carrot, ginger, green chillies, crispy noodles",
+    "price": { "veg": 450, "chicken": 475 }
+  },
+  {
+    "name": "Clear Soup",
+    "description": "Light and refreshing soup with vegetables and mild spices",
+    "price": { "veg": 450, "chicken": 475 }
+  },
+  {
+    "name": "Exotica’s Garden Salad",
+    "description": "Assorted garden salad leaves with olive oil, black pepper and tangy vinaigrette",
+    "price": 375
+  },
+  {
+    "name": "Green Salad",
+    "description": "",
+    "price": 295
+  },
+  {
+    "name": "Peri Peri French Fries",
+    "description": "",
+    "price": 475
+  },
+  {
+    "name": "Peanut Masala",
+    "description": "",
+    "price": 375
+  },
+  {
+    "name": "Masala Papad",
+    "description": "Roasted or fried",
+    "price": 375
+  },
+  {
+    "name": "Banarasi Puri",
+    "description": "Beetroot raita, pineapple, tamarind chutney, sev",
+    "price": 495
+  },
+  {
+    "name": "Karara Palak Chaat",
+    "description": "Crispy spinach topped with curd, chutney, sev and chaat masala",
+    "price": 595
+  },
+  {
+    "name": "Aloo Ghugni Chaat",
+    "description": "White peas ghugni tempered in ghee with aloo tikki and tamarind chutney",
+    "price": 625
+  },
+  {
+    "name": "Achari Stuffed Paneer",
+    "description": "Paneer with achari spices and chutney",
+    "price": 425
+  },
+  {
+    "name": "Paneer Tikka Peshawari",
+    "description": "Tender paneer cubes marinated in yoghurt masala",
+    "price": 625
+  },
+  {
+    "name": "Paneer Tikka Mirchwala",
+    "description": "Paneer with chilli garlic, cashew paste and fruit chutneys",
+    "price": 625
+  },
+  {
+    "name": "Dahi Ke Kebab",
+    "description": "Crispy golden-fried hung curd croquettes",
+    "price": 625
+  },
+  {
+    "name": "Theecha Aloo Dahi Tarka",
+    "description": "Spicy roasted baby potatoes served on creamy dahi",
+    "price": 625
+  },
+  {
+    "name": "Khumb Exotica",
+    "description": "Stuffed button mushrooms with spinach and cheese",
+    "price": 625
+  },
+  {
+    "name": "Malai Broccoli",
+    "description": "Creamy charcoal roasted broccoli florets",
+    "price": 625
+  },
+  {
+    "name": "Hara Bhara Kebab",
+    "description": "Spinach and cottage cheese patties",
+    "price": 595
+  },
+  {
+    "name": "Honey Chilli Lotus Stem",
+    "description": "Crispy fried lotus stem tossed in sweet and spicy sauce",
+    "price": 595
+  },
+  {
+    "name": "Veg Manchurian",
+    "description": "Vegetable dumplings in manchurian sauce",
+    "price": 595
+  },
+  {
+    "name": "Trio of Mushrooms",
+    "description": "Shimeji, button and black fungus mushrooms in chilli soya sauce",
+    "price": 675
+  },
+  {
+    "name": "American Corn Pepper Salt",
+    "description": "Crispy fried sweet corn with onion, garlic and pepper",
+    "price": 595
+  },
+  {
+    "name": "Chilli Paneer",
+    "description": "Batter fried paneer tossed with onion, capsicum and scallions",
+    "price": 625
+  },
+  {
+    "name": "Spinach Cheese & Corn Rolls",
+    "description": "Fried spring rolls with spinach, corn and cheese",
+    "price": 625
+  },
+  {
+    "name": "Crispy Chilli Baby Corn",
+    "description": "Crispy fried baby corn in sweet and spicy sauce",
+    "price": 595
+  },
+  {
+    "name": "Murg Ke Chaamp",
+    "description": "Flavor-packed chicken tikka",
+    "price": 675
+  },
+  {
+    "name": "Murg Kasturi",
+    "description": "Chicken marinated in creamy hung curd and fenugreek",
+    "price": 675
+  },
+  {
+    "name": "Murg Malai Kebab",
+    "description": "Creamy cashew-based chicken kebab",
+    "price": 675
+  },
+  {
+    "name": "Tandoori Murg",
+    "description": "Yoghurt and spice marinated chicken cooked in clay oven",
+    "price": 675
+  },
+  {
+    "name": "Gosht Seekh Kebab",
+    "description": "Minced lamb kebabs with aromatic spices",
+    "price": 725
+  },
+  {
+    "name": "Smoked Mutton Chops",
+    "description": "Tandoor cooked marinated lamb chops",
+    "price": 725
+  },
+  {
+    "name": "Roti Pe Boti",
+    "description": "Tender lamb paired with cocktail paratha",
+    "price": 725
+  },
+  {
+    "name": "Galouti Kebab",
+    "description": "Awadhi-style melt-in-mouth lamb kebab",
+    "price": 725
+  },
+  {
+    "name": "Lehsooni Fish Tikka",
+    "description": "Garlic marinated murrel fish tikka",
+    "price": 725
+  },
+  {
+    "name": "Tawa Fish",
+    "description": "Shallow fried murrel fish with mustard and curry leaves",
+    "price": 725
+  },
+  {
+    "name": "Bhattiwala Nimbu Mirchi Jhinga",
+    "description": "Clay oven grilled prawns with lemon and chilli",
+    "price": 775
+  },
+  {
+    "name": "Hakka Chilli Chicken",
+    "description": "Chicken tossed with onions and capsicum in chilli soya sauce",
+    "price": 675
+  },
+  {
+    "name": "Devils Chicken",
+    "description": "Batter fried chicken tossed with chilli flakes and ginger oil",
+    "price": 675
+  },
+  {
+    "name": "Drums Of Heaven",
+    "description": "Chicken lollipops in chef’s secret sauce",
+    "price": 675
+  },
+  {
+    "name": "Mongolian Fish",
+    "description": "Fish cooked in Mongolian, hoisin, soy and oyster sauces",
+    "price": 725
+  },
+  {
+    "name": "Schezwan Pepper Prawn",
+    "description": "Crispy prawns coated in schezwan pepper sauce",
+    "price": 725
+  },
+  {
+    "name": "Butter Garlic Prawns",
+    "description": "Prawns sautéed in buttery garlic sauce",
+    "price": 775
+  },
+  {
+    "name": "Chilli Prawns",
+    "description": "Wok tossed prawns with dark soya, basil and bird’s eye chilli",
+    "price": 775
+  }
+]
