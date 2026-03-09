@@ -8,6 +8,8 @@ connections.connect(
 
 
 
+
+
 fields = [
     FieldSchema(
         name = 'id',
@@ -30,7 +32,6 @@ fields = [
         name="description",
         dtype=DataType.VARCHAR,
         max_length = 10000
-        
     )
 ]
 
@@ -39,13 +40,13 @@ fields = [
 schema = CollectionSchema(fields=fields, description='Menu RAG text embeddings with descriptions')
 collection = Collection(schema=schema, name='hydmenu3')
 
-collection.create_index(
-    field_name="embedding",
-    index_params={
-        "index_type": "HNSW",
-        "metric_type": "COSINE",
-        "params": {"M": 8, "efConstruction": 64}
-    }
-)
+# collection.create_index(
+#     field_name="embedding",
+#     index_params={
+#         "index_type": "HNSW",
+#         "metric_type": "COSINE",
+#         "params": {"M": 8, "efConstruction": 64}
+#     }
+# )
 
 collection.load()

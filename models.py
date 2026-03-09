@@ -8,7 +8,14 @@ model = HuggingFaceEndpoint(repo_id="meta-llama/Llama-3.1-8B-Instruct",
     max_new_tokens=100,
     provider='auto')
 
+smallModel = HuggingFaceEndpoint(repo_id="meta-llama/Llama-3.1-8B-Instruct",
+    huggingfacehub_api_token=os.getenv('HUGGINGFACE_TOKEN'),
+    temperature=0.5,
+    max_new_tokens=100,
+    provider='auto')
+
 llm = ChatHuggingFace(llm = model)
+slm = ChatHuggingFace(llm = smallModel)
 
 embedding_model = InferenceClient(
     model="sentence-transformers/all-MiniLM-L6-v2",

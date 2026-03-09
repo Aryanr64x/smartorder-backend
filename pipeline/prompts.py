@@ -1,4 +1,87 @@
 from langchain_core.prompts import PromptTemplate
+#  intent classification
+#  constraint ranking from db
+#  llm based re orderings
+#  since db retrieval involved mcp might come in play 
+
+greetPrompt = PromptTemplate(template="""
+                                ### Role
+                                You are a waiter at restaurant name 'Crazy Indian Food'.
+                                
+                                ### Task
+                                You are greeted with the greeting below . You have greet back gently and politely like a waiter. 
+                                
+                                ### Instructions
+                                1) Greet back gently and politely to the greeting provided below
+                                2) Do not make the greeting back to long or too short.
+                                
+                                ### Greeting
+                                Here is the greeting that you will have to greet back 
+                                {greet}
+                                
+                                
+                                ### Output
+                                Just the greetback. No other text. 
+                                
+                             """, input_variables=['greet'])
+
+
+intentDetectionPrompt = PromptTemplate(template = """
+        ###Role
+        You are an intent classifier. For the given user query you have to detect it's intent, The intent should be from among 
+        the list of possible intents. Do not give an intent from outside the list of possible intents.
+        
+        ### Task
+        Give the intent of the provided query from the list of intents given below.
+        
+        ### Instructions
+        1) For the given user query you have to detect it's intent, The intent should be from among 
+        the list of possible intents.
+        2)  Do not give an intent from outside the list of possible intents.
+        3)  Just return the intent. Do not add any extra text before or after it.
+
+        
+        ###Intents
+        Here are a all the possible intents 
+        1. greet
+        - Query is greeting or starting conversation.
+        - Examples: "hi", "hello", "good evening", "hey there"
+
+        2. menu_retrieval
+        - Query is asking about food items, prices, recommendations, ingredients, availability, veg/non-veg, spicy level, heavy or light etc.
+        - Examples:
+            - "Show me veg starters "
+            - "What is the price of pasta ?"
+            - "Suggest something spicy ?"
+            - "Do you have biryani ?"
+
+        3. faq
+        - Query questions about the restaurant itself (metadata).
+        - Examples:
+            - "Who is the chef?"
+            - "What are your opening hours?"
+            - "Where are you located?"
+            - "Do you offer catering?"
+
+        4. out_of_scope
+        - Anything NOT related to the restaurant, menu or food.
+        - Examples:
+            - "Who won the IPL?"
+            - "Explain quantum physics"
+            - "Write a poem"
+            - "What is the stock market today?"
+            
+            
+        ### Query  
+        Here is the query whose intent you will classify.
+        {query}
+        
+        ### Output
+        Just the intent out of the above possible intents. Do not add any extra words before or after it. Do NOT output any 
+        other intent apart from the above possible intents.
+    """, input_variables=['query'])
+
+
 
 refineQueryPrompt = PromptTemplate(template="""
         #Instructions

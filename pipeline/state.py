@@ -1,5 +1,7 @@
 from typing import TypedDict, List
+
 class State(TypedDict):
+    intent: str
     input: str
     refined_input: str
     output: str
@@ -9,3 +11,4 @@ class State(TypedDict):
     prompt_top_k_items: str
     output_structured: str
     items: List[str]
+    
