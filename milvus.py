@@ -6,10 +6,6 @@ connections.connect(
     token="acba16f86d47ecd9a8bd89b9244e7ddeea4b1df5503d6ec194d6762ba8885022d1485b7416664e587395371e28fee67c6753c9f3"
 )
 
-
-
-
-
 fields = [
     FieldSchema(
         name = 'id',
@@ -17,36 +13,28 @@ fields = [
         is_primary=True,
         auto_id = True         
     ),
-
     FieldSchema(
         name='embedding', 
         dtype=DataType.FLOAT_VECTOR,
         dim = 384
         ),
     FieldSchema(
-        name='text',
-        dtype=DataType.VARCHAR,
-        max_length = 1024
-    ),
-    FieldSchema(
-        name="description",
-        dtype=DataType.VARCHAR,
-        max_length = 10000
+        name="sql_id",
+        dtype=DataType.INT64
     )
 ]
 
 
-
 schema = CollectionSchema(fields=fields, description='Menu RAG text embeddings with descriptions')
-collection = Collection(schema=schema, name='hydmenu3')
-
-# collection.create_index(
-#     field_name="embedding",
-#     index_params={
-#         "index_type": "HNSW",
-#         "metric_type": "COSINE",
-#         "params": {"M": 8, "efConstruction": 64}
-#     }
-# )
-
+collection = Collection(schema=schema, name='smartorder')
+collection.create_index(
+    field_name="embedding",
+    index_params={
+        "index_type": "HNSW",
+        "metric_type": "COSINE",
+        "params": {"M": 8, "efConstruction": 64}
+    }
+)
 collection.load()
+
+

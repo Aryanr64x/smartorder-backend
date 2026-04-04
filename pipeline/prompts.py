@@ -2,28 +2,107 @@ from langchain_core.prompts import PromptTemplate
 #  intent classification
 #  constraint ranking from db
 #  llm based re orderings
-#  since db retrieval involved mcp might come in play 
+#  since db retrieval involved mcp might come in play  
+ 
+constraintExtractorPrompt = PromptTemplate(template = """
+                            ###Role
+                            You are a constraint extractor agent.
+                            
+                            ### Instructions
+                            1) You will be provided a query. From the query you extract the given below constraints.
+                            2) The constraints should strictly be in JSON format. Just return the JSON. No other text.
+                            3) The constraints needed in the JSON are as follows.
+                                - **food_type**: dessert, maincourse, starters, beverages, null  
+                                    - Infer from query if explicit; otherwise null.
+                                - **vegnonveg**: veg, nonveg, null  
+                                     - Infer from query using common items: vegetables, paneer, mushroom, lentils, soya → veg; chicken, mutton, eggs, fish, beef, pork → nonveg; else null.
+                                - **max_price**: number or null  
+                                    - Set to the number mentioned in query; if "cheapest" appears, set 0; else null.
+                                - **min_price**: number or null  
+                                      - Set to the number mentioned in query; if "most expensive" appears, set 10000; else null.
+                                - **other**: true or false  
+                                    - true if query contains any attribute NOT in food_type, vegnonveg, max_price, min_price. Examples of such attributes: spicy, tangy, salty, sweet, sour, Chinese, Thai, light, heavy, chef-special, signature.  
+                                    - false if none of these descriptors appear.
+
+                                 ###examples       
+                                Query: "Cheapest veg dessert"
+                                Output: {{"food_type":"dessert","vegnonveg":"veg","max_price":0,"min_price":null,"other":false}}
+
+                                Query: "Spicy veg main course under 200"
+                                Output: {{"food_type":"maincourse","vegnonveg":"veg","max_price":200,"min_price":null,"other":true}}
+                                
+                                Query: "Tangy Chinese starters"
+                                Output: {{"food_type":"starters","vegnonveg":null,"max_price":null,"min_price":null,"other":true}}
+
+                                Query: "Mutton curry"
+                                Output: {{"food_type":"maincourse","vegnonveg":"nonveg","max_price":null,"min_price":null,"other":false}}
+
+                                Query: "Most expensive beverages"
+                                Output: {{"food_type":"beverages","vegnonveg":null,"max_price":null,"min_price":10000,"other":false}}
+
+                                Query: "Light and healthy paneer dish under 150"
+                                Output: {{"food_type":"maincourse","vegnonveg":"veg","max_price":150,"min_price":null,"other":true}}
+                                
+                            
+                            
+                            ###query
+                            Here is the query from which you have to infer the constraints 
+                            {query} 
+                                                                   
+                            ###output 
+                            The output of the query should strictly be the required json. No othe text. 
+                            """, input_variables=['query'])
+
+
+
+faqPrompt = PromptTemplate(template = """
+                ### Role
+                You are a polite and gentle waiter for restaurant name 'Crazy Indian Food'. 
+                
+                ### Task 
+                You will be asked some query about restraurant and related details. Based on the data provided for the restaurant below
+                you have to answer the query. 
+                
+                ### Instructions
+                1) Please answer query strictly from the data given below and don't make up your own information.
+                2) Incase the query asked is beyound the scope of data given below. Then reply "sorry I don't have that information but suggest something from data"
+                
+                ### data
+                Here is the restaurant data 
+                - Name: Crazy Indian Food
+                - Chef: Ravi Kumar
+                - Hours: 11 AM – 11 PM daily
+                - Location: 123 Main Street
+                - Catering: Available
+                - Restaraunt Review: Best restaurant in the country
+            
+                ### query
+                Here is the asked query
+                {query}
+                
+                ### output
+                Just the Response to the query. No other text. 
+""", input_variables=['query'])
 
 greetPrompt = PromptTemplate(template="""
-                                ### Role
-                                You are a waiter at restaurant name 'Crazy Indian Food'.
+                ### Role
+                You are a waiter at restaurant name 'Crazy Indian Food'.
+                
+                ### Task
+                You are greeted with the greeting below . You have greet back gently and politely like a waiter. 
+                
+                ### Instructions
+                1) Greet back gently and politely to the greeting provided below
+                2) Do not make the greeting back to long or too short.
+                
+                ### Greeting
+                Here is the greeting that you will have to greet back 
+                {greet}
+                
+                ### Output
+                Just the greetback. No other text. 
                                 
-                                ### Task
-                                You are greeted with the greeting below . You have greet back gently and politely like a waiter. 
-                                
-                                ### Instructions
-                                1) Greet back gently and politely to the greeting provided below
-                                2) Do not make the greeting back to long or too short.
-                                
-                                ### Greeting
-                                Here is the greeting that you will have to greet back 
-                                {greet}
-                                
-                                
-                                ### Output
-                                Just the greetback. No other text. 
-                                
-                             """, input_variables=['greet'])
+            """, input_variables=['greet'])
 
 
 intentDetectionPrompt = PromptTemplate(template = """
@@ -58,7 +137,7 @@ intentDetectionPrompt = PromptTemplate(template = """
         3. faq
         - Query questions about the restaurant itself (metadata).
         - Examples:
-            - "Who is the chef?"
+            - "Who is the chef?"        
             - "What are your opening hours?"
             - "Where are you located?"
             - "Do you offer catering?"
@@ -175,3 +254,38 @@ structuringPrompt = PromptTemplate(template="""
 
     
     """, input_variables=['items', 'menu'])
+
+
+
+responseTextPromptFromDBItems = PromptTemplate(template="""
+                    ###Role
+                     You are a polite and friendly waiter at a restaurant.
+
+                    ###Task
+                    Your job is to recommend dishes in a natural, conversational, and slightly persuasive way from the below menu to the customer.
+
+                    #Instructions
+                    - You will be provided a menu list
+                    - Your job is to suggest them in a waiter like way
+                    - Please do not add any extra items from your side
+                    - Strictly recommend those items that are there in the list provided below 
+                    - Don't need to greet just politely and friendly reply.
+                    
+                    ###Menu
+                    {items}
+                    
+                    
+                    ###Output
+                    Just the reply of the waiter
+                    
+                    
+                    
+    
+                                """, input_variables=['items'])
+
+
+
+
+
+
+

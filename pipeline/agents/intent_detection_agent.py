@@ -5,6 +5,7 @@ from pipeline.state import State
 def detect_intent(state: State):
     res = llm.invoke(intentDetectionPrompt.format(query = state['input']))
     state['intent'] = res.content
+    print(state['intent'])
     return state
 
 def intent_router(state: State):
