@@ -1,6 +1,9 @@
-from pipeline.graph import pipeline
-from fastapi import FastAPI
-from schemas import QueryRequest
+
+from fastapi import FastAPI 
+from routes.chat_router import chat_router
+from routes.auth_router import auth_router
+from routes.order_router import order_router
+from routes.dashboard_router import dashboard_router
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -14,15 +17,9 @@ app.add_middleware(CORSMiddleware,
     allow_methods=["*"],  
     allow_headers=["*"])
 
-
-@app.post('/menu')
-def test(request: QueryRequest):
-    res = pipeline.invoke({ 'intent':'' ,'input': request.query,  'refined_input':'' ,'output':'', 'milvus_rows':[], 'query_embedding':[], 'top_k_items':[], 'output_structured': '', 'prompt_top_k_items': '', 
-                           'items': [], 'constraints': {}, 'retriveal_strategy': '', 'database_k_items':[]})
-    return {
-        'response_text': res['output'],
-        'items': res['items']
-    }
-
-
+app.include_router(chat_router, prefix='/menu')
+app.include_router(auth_router,       prefix="/auth")
+app.include_router(order_router,      prefix="/order")
+app.include_router(dashboard_router,  prefix="/dashboard")
+ 
 

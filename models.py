@@ -15,9 +15,13 @@ smallModel = HuggingFaceEndpoint(repo_id="meta-llama/Llama-3.1-8B-Instruct",
     provider='auto')
 
 llm = ChatHuggingFace(llm = model)
+
+
+
 slm = ChatHuggingFace(llm = smallModel)
 
 embedding_model = InferenceClient(
     model="sentence-transformers/all-MiniLM-L6-v2",
     provider='hf-inference',
-    api_key=os.getenv('HUGGINGFACE_TOKEN'))  
+    api_key=os.getenv('HUGGINGFACE_TOKEN')) 
+

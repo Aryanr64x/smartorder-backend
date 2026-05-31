@@ -6,3 +6,8 @@ def greet(state: State):
     res = slm.invoke(greetPrompt.format(greet = state['input']))
     state['output'] = res.content
     return state
+
+
+def greet_streaming(state: State):
+    """Call outside graph for streaming path."""
+    return slm.stream(greetPrompt.format(greet=state['input']))

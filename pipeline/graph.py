@@ -4,15 +4,14 @@ from pipeline.agents.intent_detection_agent import detect_intent, intent_router
 from pipeline.agents.greet_agent import greet
 from pipeline.agents.faq_agent import faq
 from pipeline.agents.guardrails_agent import reject
-from pipeline.agents.menu_retrieval_agent import refine_query, generate_query_embedding, get_nearest_menu_items, get_response, constraint_extractor, retrieval_strategy_decider, retriveal_strategy_router, query_constraints, generate_response_for_dbonly, database_used_router, fetch_db_details, fetch_loaded_db_details
-
-
+from pipeline.agents.menu_retrieval_agent import (
+    refine_query, generate_query_embedding, get_nearest_menu_items,
+    constraint_extractor, retrieval_strategy_decider, retriveal_strategy_router,
+    query_constraints, database_used_router, fetch_db_details, fetch_loaded_db_details
+)
+# NOTE: get_response and generate_response_for_dbonly are NOT imported here anymore
 
 graph = StateGraph(State)
-# technically constraint logic and all
-# business pov ops and sassification check and all
-
-
 
 graph.add_node('detect_intent', detect_intent)
 graph.add_node('greet', greet)
@@ -26,27 +25,37 @@ graph.add_node('generate_query_embedding', generate_query_embedding)
 graph.add_node('get_nearest_menu_items', get_nearest_menu_items)
 graph.add_node('fetch_db_details', fetch_db_details)
 graph.add_node('fetch_loaded_db_details', fetch_loaded_db_details)
-graph.add_node('get_response', get_response)
-graph.add_node('generate_response_for_dbonly', generate_response_for_dbonly)
 
-
-graph.add_conditional_edges('detect_intent', intent_router , {'greet': 'greet', 'menu_retrieval': 'constraint_extractor', 'faq': 'faq', 'out_of_scope': 'reject'})
+graph.add_conditional_edges('detect_intent', intent_router, {
+    'greet': 'greet',
+    'menu_retrieval': 'constraint_extractor',
+    'faq': 'faq',
+    'out_of_scope': 'reject'
+})
 graph.add_edge('constraint_extractor', 'retrieval_strategy_decider')
-graph.add_conditional_edges('retrieval_strategy_decider', retriveal_strategy_router , {'hybrid': 'query_constraints', 'query': 'query_constraints', 'rag': 'refine_query', 'fallback': 'reject'})
-graph.add_conditional_edges('query_constraints', retriveal_strategy_router, {'hybrid': 'refine_query', 'query': 'generate_response_for_dbonly', 'rag': 'reject', 'fallback': 'reject'})
+graph.add_conditional_edges('retrieval_strategy_decider', retriveal_strategy_router, {
+    'hybrid': 'query_constraints',
+    'query':  'query_constraints',
+    'rag':    'refine_query',
+    'fallback': 'reject'
+})
+graph.add_conditional_edges('query_constraints', retriveal_strategy_router, {
+    'hybrid': 'refine_query',
+    'query':  END,        # <-- stops here, generation happens outside
+    'rag':    'reject',
+    'fallback': 'reject'
+})
 graph.add_edge('refine_query', 'generate_query_embedding')
 graph.add_edge('generate_query_embedding', 'get_nearest_menu_items')
-graph.add_conditional_edges('get_nearest_menu_items', database_used_router, {'yes': 'fetch_loaded_db_details', 'no': 'fetch_db_details'})
-graph.add_edge('fetch_db_details', 'get_response')
-graph.add_edge('fetch_loaded_db_details', 'get_response')
-
-
-
-#end egdes 
-graph.add_edge('get_response', END)
-graph.add_edge('generate_response_for_dbonly', END)
+graph.add_conditional_edges('get_nearest_menu_items', database_used_router, {
+    'yes': 'fetch_loaded_db_details',
+    'no':  'fetch_db_details'
+})
+graph.add_edge('fetch_db_details', END)        # <-- stops here
+graph.add_edge('fetch_loaded_db_details', END) # <-- stops here
+graph.add_edge('greet', END)
+graph.add_edge('faq', END)
+graph.add_edge('reject', END)
 
 graph.set_entry_point('detect_intent')
-            
-  
-pipeline = graph.compile()                 
+pipeline = graph.compile()

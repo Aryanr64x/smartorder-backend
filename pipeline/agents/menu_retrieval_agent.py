@@ -12,8 +12,7 @@ def constraint_extractor(state: State):
     print(state['constraints'])
     return state
 
-def retrieval_strategy_decider(state: State):
-    
+def retrieval_strategy_decider(state: State): 
     def is_present(val):
         return val is not None and val != "null"
     
@@ -171,3 +170,18 @@ def get_response(state):
     state['output'] = res.content
     return state
 
+
+
+
+
+def get_response_streaming(state: State):
+    prompt_menu = "List of food items in the menu \n"
+    for item in state['items']:
+        prompt_menu += "item: " + item['name'] + ", description: " + item['description'] + " \n"
+    state['prompt_top_k_items'] = prompt_menu
+    return llm.stream(mainPrompt.format(menu=prompt_menu, query=state['input']))
+
+def generate_response_for_dbonly_streaming(state: State):
+    item_names = [item['name'] for item in state['database_k_items']]
+    state['items'] = state['database_k_items']
+    return llm.stream(responseTextPromptFromDBItems.format(items='\n'.join(item_names)))

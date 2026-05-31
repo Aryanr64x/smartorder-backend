@@ -27,14 +27,14 @@ fields = [
 
 schema = CollectionSchema(fields=fields, description='Menu RAG text embeddings with descriptions')
 collection = Collection(schema=schema, name='smartorder')
-collection.create_index(
-    field_name="embedding",
-    index_params={
-        "index_type": "HNSW",
-        "metric_type": "COSINE",
-        "params": {"M": 8, "efConstruction": 64}
-    }
-)
+# collection.create_index(
+#     field_name="embedding",
+#     index_params={
+#         "index_type": "HNSW",
+#         "metric_type": "COSINE",
+#         "params": {"M": 8, "efConstruction": 64}
+#     }
+# )
 collection.load()
 
 
