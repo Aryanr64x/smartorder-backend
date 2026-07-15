@@ -77,6 +77,68 @@ def get_orders(restaurant_id: int = Depends(get_restaurant_id)):
     return {"orders": orders}
 
 
+@dashboard_router.get("/tables")
+def get_tables(restaurant_id: int = Depends(get_restaurant_id)):
+    """List all tables for this restaurant, with a live order count per table."""
+    tables_res = (
+        supabase.table("tables")
+        .select("*")
+        .eq("restaurant_id", restaurant_id)
+        .order("id")
+        .execute()
+    )
+    tables = tables_res.data or []
+
+    # Count active (not done) orders per table so the dashboard can show a badge.
+    active_by_table: dict = {}
+    if tables:
+        orders_res = (
+            supabase.table("orders")
+            .select("table_id, status")
+            .eq("restaurant_id", restaurant_id)
+            .neq("status", "done")
+            .execute()
+        )
+        for row in (orders_res.data or []):
+            active_by_table[row["table_id"]] = active_by_table.get(row["table_id"], 0) + 1
+
+    for t in tables:
+        t["active_orders"] = active_by_table.get(t["id"], 0)
+
+    return {"tables": tables}
+
+
+@dashboard_router.post("/tables")
+def create_table(restaurant_id: int = Depends(get_restaurant_id)):
+    """Create a new table for this restaurant. The returned id is what the
+    customer QR code encodes (?table=<id>)."""
+    res = supabase.table("tables").insert({"restaurant_id": restaurant_id}).execute()
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Failed to create table.")
+    return {"table": res.data[0]}
+
+
+@dashboard_router.delete("/tables/{table_id}")
+def delete_table(table_id: int, restaurant_id: int = Depends(get_restaurant_id)):
+    """Remove a table (only if it has no orders referencing it)."""
+    owned = (
+        supabase.table("tables")
+        .select("id")
+        .eq("id", table_id)
+        .eq("restaurant_id", restaurant_id)
+        .execute()
+    )
+    if not owned.data:
+        raise HTTPException(status_code=404, detail="Table not found.")
+
+    existing = supabase.table("orders").select("id").eq("table_id", table_id).limit(1).execute()
+    if existing.data:
+        raise HTTPException(status_code=409, detail="Table has orders and cannot be deleted.")
+
+    supabase.table("tables").delete().eq("id", table_id).execute()
+    return {"deleted": table_id}
+
+
 @dashboard_router.patch("/orders/{order_id}/status")
 def update_order_status(
     order_id: int,

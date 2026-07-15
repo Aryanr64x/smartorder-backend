@@ -1,5 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import StreamingResponse
+from langchain_core.messages import HumanMessage, AIMessage
 from pipeline.graph import pipeline
 from pipeline.agents.greet_agent import greet_streaming
 from pipeline.agents.faq_agent import faq_streaming
@@ -14,12 +15,35 @@ chat_router = APIRouter()
 
 SARVAM_API_KEY = os.getenv("sk_uceyn8vm_OZ0QSjH5doHDX6GouZSNiUsl")
 
-INITIAL_STATE = lambda q: {
-    'intent': '', 'input': q, 'refined_input': '', 'output': '',
-    'milvus_rows': [], 'query_embedding': [], 'top_k_items': [],
-    'output_structured': '', 'prompt_top_k_items': '', 'items': [],
-    'constraints': {}, 'retriveal_strategy': '', 'database_k_items': []
-}
+
+def to_lc_messages(history):
+    """Convert the client's [{role, content}] transcript into LangChain messages.
+
+    These fill every prompt's MessagesPlaceholder('history'), so the system
+    prompt stays defined once and only the prior turns are appended.
+    """
+    messages = []
+    for turn in (history or []):
+        # accept both pydantic ChatTurn objects and raw dicts (voice form JSON)
+        role = getattr(turn, 'role', None) if not isinstance(turn, dict) else turn.get('role')
+        content = getattr(turn, 'content', None) if not isinstance(turn, dict) else turn.get('content')
+        if not content:
+            continue
+        if role in ('user', 'human'):
+            messages.append(HumanMessage(content=content))
+        elif role in ('assistant', 'bot', 'ai'):
+            messages.append(AIMessage(content=content))
+    return messages
+
+
+def INITIAL_STATE(q, history=None):
+    return {
+        'history': to_lc_messages(history),
+        'intent': '', 'input': q, 'refined_input': '', 'output': '',
+        'milvus_rows': [], 'query_embedding': [], 'top_k_items': [],
+        'output_structured': '', 'prompt_top_k_items': '', 'items': [],
+        'constraints': {}, 'retriveal_strategy': '', 'database_k_items': []
+    }
 
 def pick_stream(state: dict):
     intent   = state.get('intent', '')
@@ -44,7 +68,7 @@ async def chat_stream(request: QueryRequest):
 
     state = await loop.run_in_executor(
         executor,
-        lambda: pipeline.invoke(INITIAL_STATE(request.query))
+        lambda: pipeline.invoke(INITIAL_STATE(request.query, request.history))
     )
 
     print("INTENT:", state.get('intent'))
@@ -93,7 +117,7 @@ async def chat_stream(request: QueryRequest):
 
 # ── Voice streaming endpoint ──────────────────────────────────────────────────
 @chat_router.post('/voice/stream')
-async def voice_stream(audio: UploadFile = File(...)):
+async def voice_stream(audio: UploadFile = File(...), history: str = Form("[]")):
     if not audio.content_type or not audio.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="Expected an audio file.")
 
@@ -122,13 +146,18 @@ async def voice_stream(audio: UploadFile = File(...)):
 
     print(f"[voice] STT transcript: {transcript!r}")
 
+    try:
+        history_turns = json.loads(history)
+    except (ValueError, TypeError):
+        history_turns = []
+
     # ── Run retrieval graph ───────────────────────────────────────────
     loop = asyncio.get_event_loop()
     executor = ThreadPoolExecutor(max_workers=1)
 
     state = await loop.run_in_executor(
         executor,
-        lambda: pipeline.invoke(INITIAL_STATE(transcript))
+        lambda: pipeline.invoke(INITIAL_STATE(transcript, history_turns))
     )
 
     llm_stream = pick_stream(state)
@@ -205,7 +234,7 @@ async def voice_stream(audio: UploadFile = File(...)):
 # ── Original non-streaming endpoints (unchanged) ──────────────────────────────
 @chat_router.post('')
 def test(request: QueryRequest):
-    res = pipeline.invoke(INITIAL_STATE(request.query))
+    res = pipeline.invoke(INITIAL_STATE(request.query, request.history))
     return {
         'response_text': res['output'],
         'items': res['items']
@@ -213,7 +242,7 @@ def test(request: QueryRequest):
 
 
 @chat_router.post('/voice')
-async def voice(audio: UploadFile = File(...)):
+async def voice(audio: UploadFile = File(...), history: str = Form("[]")):
     if not audio.content_type or not audio.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="Expected an audio file.")
 
@@ -242,7 +271,12 @@ async def voice(audio: UploadFile = File(...)):
 
     print(f"[voice] STT transcript: {transcript!r}")
 
-    res = pipeline.invoke(INITIAL_STATE(transcript))
+    try:
+        history_turns = json.loads(history)
+    except (ValueError, TypeError):
+        history_turns = []
+
+    res = pipeline.invoke(INITIAL_STATE(transcript, history_turns))
     response_text = res['output']
     print(f"[voice] pipeline output: {response_text!r}")
 

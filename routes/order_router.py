@@ -12,13 +12,25 @@ class OrderItem(BaseModel):
 
 class PlaceOrderRequest(BaseModel):
     items: List[OrderItem]
-    restaurant_id: int = 1
-    table_id: int = 1
+    table_id: int          # which table placed the order (from the QR / URL)
 
 @order_router.post("")
 def place_order(request: PlaceOrderRequest):
     if not request.items:
         raise HTTPException(status_code=400, detail="Cart is empty.")
+
+    # 0. Resolve the restaurant from the table so orders can never violate the
+    #    FK (orders.table_id -> tables.id, orders.restaurant_id -> restaurants.id).
+    table_res = (
+        supabase.table("tables")
+        .select("id, restaurant_id")
+        .eq("id", request.table_id)
+        .single()
+        .execute()
+    )
+    if not table_res.data:
+        raise HTTPException(status_code=404, detail="Unknown table.")
+    restaurant_id = table_res.data["restaurant_id"]
 
     # 1. Fetch prices from DB for all item ids
     ids = [item.id for item in request.items]
@@ -34,7 +46,7 @@ def place_order(request: PlaceOrderRequest):
 
     # 3. Insert into orders
     order_res = supabase.table("orders").insert({
-        "restaurant_id": request.restaurant_id,
+        "restaurant_id": restaurant_id,
         "table_id":      request.table_id,
         "total":         total,
         "items":         total_qty,

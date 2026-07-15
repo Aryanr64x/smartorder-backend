@@ -1,6 +1,10 @@
 from typing import TypedDict, List, Dict
 
 class State(TypedDict):
+    # Prior conversation turns as LangChain messages (HumanMessage / AIMessage).
+    # Injected into every prompt's MessagesPlaceholder("history") so the model
+    # sees the running conversation without the system prompt being duplicated.
+    history: list
     intent: str
     input: str
     refined_input: str

@@ -7,7 +7,8 @@ from supabase_client import supabase
 
 
 def constraint_extractor(state: State):
-    res = llm.invoke(constraintExtractorPrompt.format(query = state['input']))
+    res = llm.invoke(constraintExtractorPrompt.format_messages(
+        query=state['input'], history=state.get('history', [])))
     state['constraints'] = json.loads(res.content)
     print(state['constraints'])
     return state
@@ -90,7 +91,8 @@ def generate_response_for_dbonly(state: State):
         item_names.append(item['name'])
         
     
-    res = llm.invoke(responseTextPromptFromDBItems.format(items = '\n'.join(item_names)))
+    res = llm.invoke(responseTextPromptFromDBItems.format_messages(
+        items='\n'.join(item_names), history=state.get('history', [])))
     state['output'] = res.content
     
     state['items'] = state['database_k_items']
@@ -101,7 +103,8 @@ def generate_response_for_dbonly(state: State):
 
 
 def refine_query(state: State):
-    res = llm.invoke(refineQueryPrompt.format(query = state['input']))
+    res = llm.invoke(refineQueryPrompt.format_messages(
+        query=state['input'], history=state.get('history', [])))
     state['refined_input'] = res.content
     print(res.content)
     return state
@@ -166,7 +169,8 @@ def get_response(state):
         
     print(prompt_menu)
     state['prompt_top_k_items'] = prompt_menu
-    res = llm.invoke(mainPrompt.format(menu=prompt_menu, query = state['input']))
+    res = llm.invoke(mainPrompt.format_messages(
+        menu=prompt_menu, query=state['input'], history=state.get('history', [])))
     state['output'] = res.content
     return state
 
@@ -179,9 +183,11 @@ def get_response_streaming(state: State):
     for item in state['items']:
         prompt_menu += "item: " + item['name'] + ", description: " + item['description'] + " \n"
     state['prompt_top_k_items'] = prompt_menu
-    return llm.stream(mainPrompt.format(menu=prompt_menu, query=state['input']))
+    return llm.stream(mainPrompt.format_messages(
+        menu=prompt_menu, query=state['input'], history=state.get('history', [])))
 
 def generate_response_for_dbonly_streaming(state: State):
     item_names = [item['name'] for item in state['database_k_items']]
     state['items'] = state['database_k_items']
-    return llm.stream(responseTextPromptFromDBItems.format(items='\n'.join(item_names)))
+    return llm.stream(responseTextPromptFromDBItems.format_messages(
+        items='\n'.join(item_names), history=state.get('history', [])))
