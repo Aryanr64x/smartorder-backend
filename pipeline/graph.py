@@ -42,7 +42,7 @@ graph.add_conditional_edges('retrieval_strategy_decider', retriveal_strategy_rou
 graph.add_conditional_edges('query_constraints', retriveal_strategy_router, {
     'hybrid': 'refine_query',
     'query':  END,        # <-- stops here, generation happens outside
-    'rag':    'reject',
+    'rag':    'refine_query',   # SQL matched nothing — retrieve semantically instead
     'fallback': 'reject'
 })
 graph.add_edge('refine_query', 'generate_query_embedding')

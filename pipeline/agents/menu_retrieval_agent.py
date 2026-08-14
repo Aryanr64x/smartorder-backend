@@ -38,13 +38,17 @@ def retriveal_strategy_router(state: State):
     return state['retriveal_strategy']
 
 
-def query_constraints(state: State):
-    constraints = state["constraints"]
+def _menu_query(constraints, with_food_type=True):
+    """Build the filtered `menu` query for the extracted constraints.
 
+    `with_food_type` lets the caller retry without the food_type filter — it's
+    the constraint most likely to match nothing (a menu may simply carry no
+    rows of the requested course).
+    """
     query = supabase.table("menu").select("*")
 
     # food_type
-    if constraints.get("food_type") not in [None, "null"]:
+    if with_food_type and constraints.get("food_type") not in [None, "null"]:
         query = query.eq("food_type", constraints["food_type"])
 
     # veg/nonveg
@@ -56,14 +60,14 @@ def query_constraints(state: State):
     max_price = constraints.get("max_price")
     min_price = constraints.get("min_price")
 
-    
+
     if max_price not in [None, 0, "null"]:
         query = query.lte("price", max_price)
 
     if min_price not in [None, 10000, "null"]:
         query = query.gte("price", min_price)
 
-    
+
     if max_price == 0:
         # "cheapest"
         query = query.order("price", desc=False)
@@ -76,11 +80,31 @@ def query_constraints(state: State):
         # default ranking (optional)
         query = query.order("price", desc=False)
 
-    # limit
-    response = query.limit(10).execute()
-    data = response.data
+    return query.limit(10)
+
+
+def query_constraints(state: State):
+    constraints = state["constraints"]
+
+    data = _menu_query(constraints).execute().data
+
+    # Nothing matched. Usually it's food_type that's unsatisfiable (the guest
+    # asked for a dessert and the menu has none), so retry without it and keep
+    # the price / veg filters the guest actually cares about.
+    if not data and constraints.get("food_type") not in [None, "null"]:
+        print("NO SQL MATCHES — retrying without food_type")
+        data = _menu_query(constraints, with_food_type=False).execute().data
+
     state['database_k_items'] = data
     print(state['database_k_items'])
+
+    # Still nothing. Dead-ending here would generate a reply off an empty item
+    # list, so the guest gets text with no tappable items. Downgrade to
+    # semantic search over the whole menu so we can offer real alternatives.
+    if not data:
+        print("NO SQL MATCHES — falling back to rag")
+        state['retriveal_strategy'] = 'rag'
+
     return state
 
 
