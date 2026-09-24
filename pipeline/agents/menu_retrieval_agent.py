@@ -16,7 +16,7 @@ def constraint_extractor(state: State):
 def retrieval_strategy_decider(state: State): 
     def is_present(val):
         return val is not None and val != "null"
-    
+
     sql_fields = ['food_type', 'vegnonveg', 'max_price', 'min_price']
     sql_present = any(is_present(state['constraints'].get(f)) for f in sql_fields)
     other = state['constraints'].get('other', False)
@@ -38,14 +38,17 @@ def retriveal_strategy_router(state: State):
     return state['retriveal_strategy']
 
 
-def _menu_query(constraints, with_food_type=True):
+def _menu_query(constraints, restaurant_id, with_food_type=True):
     """Build the filtered `menu` query for the extracted constraints.
+
+    Always scoped to `restaurant_id` — a guest may only ever see the menu of the
+    restaurant whose table they scanned.
 
     `with_food_type` lets the caller retry without the food_type filter — it's
     the constraint most likely to match nothing (a menu may simply carry no
     rows of the requested course).
     """
-    query = supabase.table("menu").select("*")
+    query = supabase.table("menu").select("*").eq("restaurant_id", restaurant_id)
 
     # food_type
     if with_food_type and constraints.get("food_type") not in [None, "null"]:
@@ -85,15 +88,16 @@ def _menu_query(constraints, with_food_type=True):
 
 def query_constraints(state: State):
     constraints = state["constraints"]
+    restaurant_id = state["restaurant_id"]
 
-    data = _menu_query(constraints).execute().data
+    data = _menu_query(constraints, restaurant_id).execute().data
 
     # Nothing matched. Usually it's food_type that's unsatisfiable (the guest
     # asked for a dessert and the menu has none), so retry without it and keep
     # the price / veg filters the guest actually cares about.
     if not data and constraints.get("food_type") not in [None, "null"]:
         print("NO SQL MATCHES — retrying without food_type")
-        data = _menu_query(constraints, with_food_type=False).execute().data
+        data = _menu_query(constraints, restaurant_id, with_food_type=False).execute().data
 
     state['database_k_items'] = data
     print(state['database_k_items'])
@@ -116,7 +120,8 @@ def generate_response_for_dbonly(state: State):
         
     
     res = llm.invoke(responseTextPromptFromDBItems.format_messages(
-        items='\n'.join(item_names), history=state.get('history', [])))
+        items='\n'.join(item_names), history=state.get('history', []),
+        restaurant_name=state['restaurant_name']))
     state['output'] = res.content
     
     state['items'] = state['database_k_items']
@@ -142,6 +147,15 @@ def get_nearest_menu_items(state: State):
     if(state['database_k_items']):
         for item in state['database_k_items']:
             ids.append(item['id'])
+
+    # Always scope the vector search to this restaurant. In pure `rag` mode this
+    # is the ONLY filter — without it the search spans every restaurant's
+    # vectors and recommends dishes the guest can't order. In `hybrid` mode
+    # `ids` narrows it further to the rows the SQL stage already matched.
+    clauses = [f"restaurant_id == {state['restaurant_id']}"]
+    if ids:
+        clauses.append(f"sql_id in {ids}")
+    expr = " and ".join(clauses)
     
     
     results = collection.search(
@@ -150,7 +164,7 @@ def get_nearest_menu_items(state: State):
         param={"metric_type": "COSINE", "params": {"ef": 64}},
         limit=5,
         output_fields=["sql_id"],
-        expr=f"sql_id in {ids}" if ids else None
+        expr=expr
     )
 
     
@@ -173,7 +187,9 @@ def database_used_router(state: State):
 def fetch_db_details(state: State):
     print("ALWAYS HITTING THIS?")
     ids = state['top_k_items']
-    res = supabase.table('menu').select('*').in_('id', ids).execute()
+    res = (supabase.table('menu').select('*')
+           .eq('restaurant_id', state['restaurant_id'])
+           .in_('id', ids).execute())
     state['items'] = res.data
     return state
 
@@ -194,7 +210,8 @@ def get_response(state):
     print(prompt_menu)
     state['prompt_top_k_items'] = prompt_menu
     res = llm.invoke(mainPrompt.format_messages(
-        menu=prompt_menu, query=state['input'], history=state.get('history', [])))
+        menu=prompt_menu, query=state['input'], history=state.get('history', []),
+        restaurant_name=state['restaurant_name']))
     state['output'] = res.content
     return state
 
@@ -208,10 +225,12 @@ def get_response_streaming(state: State):
         prompt_menu += "item: " + item['name'] + ", description: " + item['description'] + " \n"
     state['prompt_top_k_items'] = prompt_menu
     return llm.stream(mainPrompt.format_messages(
-        menu=prompt_menu, query=state['input'], history=state.get('history', [])))
+        menu=prompt_menu, query=state['input'], history=state.get('history', []),
+        restaurant_name=state['restaurant_name']))
 
 def generate_response_for_dbonly_streaming(state: State):
     item_names = [item['name'] for item in state['database_k_items']]
     state['items'] = state['database_k_items']
     return llm.stream(responseTextPromptFromDBItems.format_messages(
-        items='\n'.join(item_names), history=state.get('history', [])))
+        items='\n'.join(item_names), history=state.get('history', []),
+        restaurant_name=state['restaurant_name']))

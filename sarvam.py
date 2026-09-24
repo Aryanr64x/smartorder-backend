@@ -1,7 +1,8 @@
+import os
 from sarvamai import SarvamAI
 import base64
 sarvam = SarvamAI(
-    api_subscription_key="sk_uceyn8vm_OZ0QSjH5doHDX6GouZSNiUsl",
+    api_subscription_key=os.getenv("SARVAM_API_KEY"),
 )
 
 response = sarvam.text_to_speech.convert(

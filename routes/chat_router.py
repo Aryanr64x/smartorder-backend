@@ -6,6 +6,7 @@ from pipeline.agents.greet_agent import greet_streaming
 from pipeline.agents.faq_agent import faq_streaming
 from pipeline.agents.menu_retrieval_agent import get_response_streaming, generate_response_for_dbonly_streaming
 from schemas import QueryRequest
+from tenancy import restaurant_for_request, restaurant_profile
 from sarvam import sarvam                        # sync client — STT only
 from sarvamai import AsyncSarvamAI, AudioOutput, EventResponse  # async client — streaming TTS
 import asyncio, json, os
@@ -13,7 +14,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 chat_router = APIRouter()
 
-SARVAM_API_KEY = os.getenv("sk_uceyn8vm_OZ0QSjH5doHDX6GouZSNiUsl")
+
+SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
 
 
 def to_lc_messages(history):
@@ -36,13 +38,17 @@ def to_lc_messages(history):
     return messages
 
 
-def INITIAL_STATE(q, history=None):
+def INITIAL_STATE(q, history=None, restaurant_id=None, table_id=None):
+    profile = restaurant_profile(restaurant_id)
     return {
         'history': to_lc_messages(history),
         'intent': '', 'input': q, 'refined_input': '', 'output': '',
         'milvus_rows': [], 'query_embedding': [], 'top_k_items': [],
         'output_structured': '', 'prompt_top_k_items': '', 'items': [],
-        'constraints': {}, 'retriveal_strategy': '', 'database_k_items': []
+        'constraints': {}, 'retriveal_strategy': '', 'database_k_items': [],
+        'restaurant_id': restaurant_id, 'table_id': table_id,
+        'restaurant_name': profile['name'],
+        'restaurant_info': profile['meta_data'] or 'No additional information available.',
     }
 
 def pick_stream(state: dict):
@@ -66,9 +72,13 @@ async def chat_stream(request: QueryRequest):
     loop = asyncio.get_event_loop()
     executor = ThreadPoolExecutor(max_workers=1)
 
+    # Resolved from the table, not trusted from the URL — see tenancy.py.
+    restaurant_id = restaurant_for_request(request.table_id, request.restaurant_id)
+
     state = await loop.run_in_executor(
         executor,
-        lambda: pipeline.invoke(INITIAL_STATE(request.query, request.history))
+        lambda: pipeline.invoke(INITIAL_STATE(
+            request.query, request.history, restaurant_id, request.table_id))
     )
 
     print("INTENT:", state.get('intent'))
@@ -117,7 +127,12 @@ async def chat_stream(request: QueryRequest):
 
 # ── Voice streaming endpoint ──────────────────────────────────────────────────
 @chat_router.post('/voice/stream')
-async def voice_stream(audio: UploadFile = File(...), history: str = Form("[]")):
+async def voice_stream(
+    audio: UploadFile = File(...),
+    history: str = Form("[]"),
+    table_id: int | None = Form(None),
+    restaurant_id: int | None = Form(None),
+):
     if not audio.content_type or not audio.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="Expected an audio file.")
 
@@ -157,7 +172,9 @@ async def voice_stream(audio: UploadFile = File(...), history: str = Form("[]"))
 
     state = await loop.run_in_executor(
         executor,
-        lambda: pipeline.invoke(INITIAL_STATE(transcript, history_turns))
+        lambda: pipeline.invoke(INITIAL_STATE(
+            transcript, history_turns,
+            restaurant_for_request(table_id, restaurant_id), table_id))
     )
 
     llm_stream = pick_stream(state)
@@ -234,7 +251,9 @@ async def voice_stream(audio: UploadFile = File(...), history: str = Form("[]"))
 # ── Original non-streaming endpoints (unchanged) ──────────────────────────────
 @chat_router.post('')
 def test(request: QueryRequest):
-    res = pipeline.invoke(INITIAL_STATE(request.query, request.history))
+    restaurant_id = restaurant_for_request(request.table_id, request.restaurant_id)
+    res = pipeline.invoke(INITIAL_STATE(
+        request.query, request.history, restaurant_id, request.table_id))
     return {
         'response_text': res['output'],
         'items': res['items']
@@ -242,7 +261,12 @@ def test(request: QueryRequest):
 
 
 @chat_router.post('/voice')
-async def voice(audio: UploadFile = File(...), history: str = Form("[]")):
+async def voice(
+    audio: UploadFile = File(...),
+    history: str = Form("[]"),
+    table_id: int | None = Form(None),
+    restaurant_id: int | None = Form(None),
+):
     if not audio.content_type or not audio.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="Expected an audio file.")
 
@@ -276,7 +300,9 @@ async def voice(audio: UploadFile = File(...), history: str = Form("[]")):
     except (ValueError, TypeError):
         history_turns = []
 
-    res = pipeline.invoke(INITIAL_STATE(transcript, history_turns))
+    res = pipeline.invoke(INITIAL_STATE(
+        transcript, history_turns,
+        restaurant_for_request(table_id, restaurant_id), table_id))
     response_text = res['output']
     print(f"[voice] pipeline output: {response_text!r}")
 

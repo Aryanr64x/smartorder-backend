@@ -21,6 +21,12 @@ fields = [
     FieldSchema(
         name="sql_id",
         dtype=DataType.INT64
+    ),
+    # Scalar filter field so a vector search can be scoped to one restaurant.
+    # Without it the RAG path would retrieve dishes from every restaurant.
+    FieldSchema(
+        name="restaurant_id",
+        dtype=DataType.INT64
     )
 ]
 

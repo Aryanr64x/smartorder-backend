@@ -7,6 +7,12 @@ stale collection and re-embeds every current menu row with its new id.
 
 Run:  ./venv/Scripts/python.exe milvus_reseed.py
 """
+from dotenv import load_dotenv
+
+# Must run BEFORE `models` is imported: models.py reads HUGGINGFACE_TOKEN at
+# import time, so a later load_dotenv() would be too late to help it.
+load_dotenv()
+
 from pymilvus import (
     connections, utility, Collection, FieldSchema, CollectionSchema, DataType,
 )
@@ -25,33 +31,40 @@ connections.connect(
 
 
 def main():
-    # 1. Drop the stale collection (old sql_ids) if present.
+    # 1. Embed every current menu row FIRST (fall back to name when description
+    #    empty). This happens before the drop on purpose: embedding is the step
+    #    that talks to a third party and fails (expired HUGGINGFACE_TOKEN -> 401).
+    #    Dropping first would leave the collection gone AND unrebuilt.
+    rows = supabase.table("menu").select("*").execute().data
+    print("menu rows to embed:", len(rows))
+    embeddings, sql_ids, restaurant_ids = [], [], []
+    for r in rows:
+        text = (r.get("description") or "").strip() or r["name"]
+        embeddings.append(embedding_model.feature_extraction(text))
+        sql_ids.append(r["id"])
+        restaurant_ids.append(r["restaurant_id"])
+    print(f"embedded {len(embeddings)} rows — safe to replace the collection")
+
+    # 2. Drop the stale collection (old schema / old sql_ids) if present.
     if utility.has_collection(NAME):
         utility.drop_collection(NAME)
         print("dropped stale collection")
 
-    # 2. Recreate with the same schema as milvus.py.
+    # 3. Recreate with the same schema as milvus.py.
     fields = [
         FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
         FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=384),
         FieldSchema(name="sql_id", dtype=DataType.INT64),
+        FieldSchema(name="restaurant_id", dtype=DataType.INT64),
     ]
     # NOTE: description must match milvus.py exactly, else the app's
     # `Collection(schema=..., name='smartorder')` raises SchemaInconsistent.
     schema = CollectionSchema(fields=fields, description="Menu RAG text embeddings with descriptions")
     col = Collection(schema=schema, name=NAME)
 
-    # 3. Embed every current menu row (fall back to name when description empty).
-    rows = supabase.table("menu").select("*").execute().data
-    print("menu rows to embed:", len(rows))
-    embeddings, sql_ids = [], []
-    for r in rows:
-        text = (r.get("description") or "").strip() or r["name"]
-        embeddings.append(embedding_model.feature_extraction(text))
-        sql_ids.append(r["id"])
-
-    # 4. Insert (order matches non-auto schema fields: embedding, sql_id).
-    col.insert([embeddings, sql_ids])
+    # 4. Insert (order matches non-auto schema fields: embedding, sql_id,
+    #    restaurant_id).
+    col.insert([embeddings, sql_ids, restaurant_ids])
     col.flush()
 
     # 5. Index + load so searches work.

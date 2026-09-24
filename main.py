@@ -1,14 +1,16 @@
 
-from fastapi import FastAPI 
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from routes.chat_router import chat_router
 from routes.auth_router import auth_router
 from routes.order_router import order_router
 from routes.dashboard_router import dashboard_router
 from routes.leads_router import leads_router
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 app = FastAPI()

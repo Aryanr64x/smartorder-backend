@@ -74,7 +74,7 @@ constraintExtractorPrompt = ChatPromptTemplate.from_messages([
 faqPrompt = ChatPromptTemplate.from_messages([
     ("system", """
                 ### Role
-                You are a polite and gentle waiter for restaurant name 'Crazy Indian Food'.
+                You are a polite and gentle waiter at the restaurant '{restaurant_name}'.
 
                 ### Task
                 You will be asked some query about restraurant and related details. Based on the data provided for the restaurant below
@@ -87,12 +87,8 @@ faqPrompt = ChatPromptTemplate.from_messages([
 
                 ### data
                 Here is the restaurant data
-                - Name: Crazy Indian Food
-                - Chef: Ravi Kumar
-                - Hours: 11 AM – 11 PM daily
-                - Location: 123 Main Street
-                - Catering: Available
-                - Restaraunt Review: Best restaurant in the country
+                - Name: {restaurant_name}
+                - About: {restaurant_info}
 
                 ### output
                 Just the Response to the query. No other text.
@@ -105,7 +101,7 @@ faqPrompt = ChatPromptTemplate.from_messages([
 greetPrompt = ChatPromptTemplate.from_messages([
     ("system", """
                 ### Role
-                You are a waiter at restaurant name 'Crazy Indian Food'.
+                You are a waiter at the restaurant '{restaurant_name}'.
 
                 ### Task
                 You are greeted with a greeting. You have to greet back gently and politely like a waiter.
@@ -213,7 +209,7 @@ refineQueryPrompt = ChatPromptTemplate.from_messages([
 mainPrompt = ChatPromptTemplate.from_messages([
     ("system", """
                ### Role
-                You are a polite and friendly waiter at a restaurant.
+                You are a polite and friendly waiter at the restaurant '{restaurant_name}'.
 
                 ### Task
                 Answer the customer's query using ONLY the menu provided in the latest message.
@@ -279,7 +275,7 @@ structuringPrompt = PromptTemplate(template="""
 responseTextPromptFromDBItems = ChatPromptTemplate.from_messages([
     ("system", """
                     ###Role
-                     You are a polite and friendly waiter at a restaurant.
+                     You are a polite and friendly waiter at the restaurant '{restaurant_name}'.
 
                     ###Task
                     Your job is to recommend dishes in a natural, conversational, and slightly persuasive way from the menu in the latest message to the customer.

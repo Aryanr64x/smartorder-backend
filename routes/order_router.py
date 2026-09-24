@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from supabase_client import supabase
+from tenancy import resolve_restaurant_id
 from pydantic import BaseModel
 from typing import List
 
@@ -21,21 +22,28 @@ def place_order(request: PlaceOrderRequest):
 
     # 0. Resolve the restaurant from the table so orders can never violate the
     #    FK (orders.table_id -> tables.id, orders.restaurant_id -> restaurants.id).
-    table_res = (
-        supabase.table("tables")
-        .select("id, restaurant_id")
-        .eq("id", request.table_id)
-        .single()
+    #    Shared with the chat path and cached there — see tenancy.py.
+    restaurant_id = resolve_restaurant_id(request.table_id)
+
+    # 1. Fetch prices from DB for all item ids, scoped to this restaurant so a
+    #    tampered cart can't smuggle in another restaurant's dish.
+    ids = [item.id for item in request.items]
+    menu_res = (
+        supabase.table("menu")
+        .select("id, price")
+        .eq("restaurant_id", restaurant_id)
+        .in_("id", ids)
         .execute()
     )
-    if not table_res.data:
-        raise HTTPException(status_code=404, detail="Unknown table.")
-    restaurant_id = table_res.data["restaurant_id"]
-
-    # 1. Fetch prices from DB for all item ids
-    ids = [item.id for item in request.items]
-    menu_res = supabase.table("menu").select("id, price").in_("id", ids).execute()
     price_map = {row["id"]: row["price"] for row in menu_res.data}
+
+    # Anything unresolved would otherwise be priced at 0 and still inserted.
+    unknown = [i for i in ids if i not in price_map]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Items not on this restaurant's menu: {unknown}",
+        )
 
     # 2. Compute total
     total = sum(

@@ -15,9 +15,6 @@ smallModel = HuggingFaceEndpoint(repo_id="meta-llama/Llama-3.1-8B-Instruct",
     provider='auto')
 
 llm = ChatHuggingFace(llm = model)
-
-
-
 slm = ChatHuggingFace(llm = smallModel)
 
 embedding_model = InferenceClient(
