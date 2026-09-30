@@ -1,4 +1,4 @@
-from pipeline.prompts import refineQueryPrompt, mainPrompt, structuringPrompt, constraintExtractorPrompt,responseTextPromptFromDBItems
+from pipeline.prompts import mainPrompt, structuringPrompt, constraintExtractorPrompt,responseTextPromptFromDBItems
 from models import llm, embedding_model
 from pipeline.state import State
 from milvus import collection
@@ -6,11 +6,22 @@ import json
 from supabase_client import supabase
 
 
+def _parse_json_object(text):
+    """Pull the first {...} block out of the model reply — models sometimes wrap
+    the JSON in prose or ```json fences despite being told not to."""
+    start, end = text.find('{'), text.rfind('}')
+    return json.loads(text[start:end + 1])
+
+
 def constraint_extractor(state: State):
+    # One call extracts both the SQL constraints and the semantic-search query,
+    # so the rag / hybrid paths don't pay for a second LLM round trip.
     res = llm.invoke(constraintExtractorPrompt.format_messages(
         query=state['input'], history=state.get('history', [])))
-    state['constraints'] = json.loads(res.content)
-    print(state['constraints'])
+    constraints = _parse_json_object(res.content)
+    state['refined_input'] = constraints.pop('refined_query', None) or state['input']
+    state['constraints'] = constraints
+    print(state['constraints'], state['refined_input'])
     return state
 
 def retrieval_strategy_decider(state: State): 
@@ -130,13 +141,6 @@ def generate_response_for_dbonly(state: State):
 
 
 
-
-def refine_query(state: State):
-    res = llm.invoke(refineQueryPrompt.format_messages(
-        query=state['input'], history=state.get('history', [])))
-    state['refined_input'] = res.content
-    print(res.content)
-    return state
 
 def generate_query_embedding(state: State):
     state['query_embedding'] = embedding_model.feature_extraction(state['refined_input'])

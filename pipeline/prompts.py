@@ -42,25 +42,33 @@ constraintExtractorPrompt = ChatPromptTemplate.from_messages([
                                 - **other**: true or false
                                     - true if query contains any attribute NOT in food_type, vegnonveg, max_price, min_price. Examples of such attributes: spicy, tangy, salty, sweet, sour, Chinese, Thai, light, heavy, chef-special, signature.
                                     - false if none of these descriptors appear.
+                                - **refined_query**: string
+                                    - A short description of the food item the guest wants, used for semantic search.
+                                      Keep only the food-describing words (taste, cuisine, dish, course). If the query is a
+                                      follow-up, use the earlier conversation to make it complete
+                                      (e.g. "cheaper ones" after "spicy starters" -> "spicy starters").
 
                                  ###examples
                                 Query: "Cheapest veg dessert"
-                                Output: {{"food_type":"dessert","vegnonveg":"veg","max_price":0,"min_price":null,"other":false}}
+                                Output: {{"food_type":"dessert","vegnonveg":"veg","max_price":0,"min_price":null,"other":false,"refined_query":"veg dessert"}}
 
                                 Query: "Spicy veg main course under 200"
-                                Output: {{"food_type":"maincourse","vegnonveg":"veg","max_price":200,"min_price":null,"other":true}}
+                                Output: {{"food_type":"maincourse","vegnonveg":"veg","max_price":200,"min_price":null,"other":true,"refined_query":"spicy veg main course"}}
 
                                 Query: "Tangy Chinese starters"
-                                Output: {{"food_type":"starters","vegnonveg":null,"max_price":null,"min_price":null,"other":true}}
+                                Output: {{"food_type":"starters","vegnonveg":null,"max_price":null,"min_price":null,"other":true,"refined_query":"tangy chinese starters"}}
 
                                 Query: "Mutton curry"
-                                Output: {{"food_type":"maincourse","vegnonveg":"nonveg","max_price":null,"min_price":null,"other":false}}
+                                Output: {{"food_type":"maincourse","vegnonveg":"nonveg","max_price":null,"min_price":null,"other":false,"refined_query":"mutton curry"}}
 
                                 Query: "Most expensive beverages"
-                                Output: {{"food_type":"beverages","vegnonveg":null,"max_price":null,"min_price":10000,"other":false}}
+                                Output: {{"food_type":"beverages","vegnonveg":null,"max_price":null,"min_price":10000,"other":false,"refined_query":"beverages"}}
 
                                 Query: "Light and healthy paneer dish under 150"
-                                Output: {{"food_type":"maincourse","vegnonveg":"veg","max_price":150,"min_price":null,"other":true}}
+                                Output: {{"food_type":"maincourse","vegnonveg":"veg","max_price":150,"min_price":null,"other":true,"refined_query":"light healthy paneer"}}
+
+                                Query: "Wanna see something thai or chinese"
+                                Output: {{"food_type":null,"vegnonveg":null,"max_price":null,"min_price":null,"other":true,"refined_query":"thai chinese"}}
 
                             ###output
                             The output of the query should strictly be the required json. No other text.
@@ -174,35 +182,6 @@ intentDetectionPrompt = ChatPromptTemplate.from_messages([
     MessagesPlaceholder("history", optional=True),
     ("human", "{query}"),
 ])
-
-
-
-refineQueryPrompt = ChatPromptTemplate.from_messages([
-    ("system", """
-        #Instructions
-        You will be provided a query in english which you have to refine it to make it such that it becomes a short description of a food item. That short description is created from
-        what you understand from the query. If the query is a follow-up, use the earlier conversation to
-        make the short description complete (e.g. "cheaper ones" after "spicy starters" -> "spicy starters").
-
-        #Examples
-        1) Query: tell me some spicy foods
-            Your reply: spicy
-        2) Query: What are the tangy options in main course?
-            Your reply: tangy main course
-        3) Query:  Show some dessert options
-            Your reply: dessert
-        4) Query: Wanna see something thai or chinese
-            Your reply: thai chinese
-
-        #Task
-        As per examples give only the short description as reply no other text!
-
-        reply only the short description
-    """),
-    MessagesPlaceholder("history", optional=True),
-    ("human", "{query}"),
-])
-
 
 
 
